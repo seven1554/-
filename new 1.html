@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>พิซซ่าเวียดนาม</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <style>
+    body {
+      background-color: #FFF9DB;
+      font-family: 'Sarabun', sans-serif;
+    }
+  </style>
+</head>
+<body class="min-h-screen p-6">
+  <div class="max-w-xl mx-auto bg-white p-6 rounded-2xl shadow-lg border border-yellow-400">
+    <div class="text-center mb-6">
+      <h1 class="text-4xl font-extrabold text-red-600">พิซซ่าเวียดนาม</h1>
+      <p class="text-yellow-700 font-semibold mt-1 text-lg">เริ่มต้นที่ 25 บาท</p>
+      <p class="text-yellow-600 font-semibold mt-2">เลือกหน้าและซอสตามใจคุณ</p>
+    </div>
+
+    <h2 class="text-xl font-bold mb-4 text-center text-red-500">เลือกหน้า (2 หน้าแรกฟรี เฉพาะไส้ ≤ 5 บาท)</h2>
+    <form id="menuForm" class="space-y-4">
+      <div id="menuList" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+
+      <h3 class="text-lg font-semibold mt-6 text-yellow-600">เลือกซอส (ฟรี ไม่จำกัด)</h3>
+      <div id="sauceList" class="grid grid-cols-3 gap-2 text-red-700">
+        <label><input type="checkbox" class="sauce" value="0" data-name="ซอสมะเขือเทศ"> ซอสมะเขือเทศ</label>
+        <label><input type="checkbox" class="sauce" value="0" data-name="ซอสพริก"> ซอสพริก</label>
+        <label><input type="checkbox" class="sauce" value="0" data-name="ซอสมายองเนส"> ซอสมายองเนส</label>
+        <label><input type="checkbox" class="sauce" value="0" data-name="ซอสพริกเผา"> ซอสพริกเผา</label>
+        <label><input type="checkbox" class="sauce" value="0" data-name="ซอสหมาล่า"> ซอสหมาล่า</label>
+      </div>
+
+      <div class="mt-6 text-xl font-bold text-center text-red-600">
+        ราคารวม: <span id="totalPrice">25</span> บาท
+      </div>
+
+      <div class="flex justify-center mt-4">
+        <button type="button" id="submitOrder" class="bg-yellow-500 text-red-900 font-bold px-6 py-2 rounded-lg hover:bg-yellow-600 shadow">
+          ยืนยันสั่งซื้อ
+        </button>
+      </div>
+    </form>
+  </div>
+
+<script>
+  const basePrice = 25;
+  const menuItems = [
+    { name: "ไส้กรอก", price: 5 },
+    { name: "ข้าวโพด", price: 5 },
+    { name: "หมึกกรุบ", price: 5 },
+    { name: "ไก่สับ", price: 5 },
+    { name: "ไก่หยอง", price: 5 },
+    { name: "แฮมไก่", price: 5 },
+    { name: "กุ้ง", price: 10 },
+    { name: "ไข่กุ้ง", price: 10 },
+    { name: "สาหร่าย", price: 10 },
+    { name: "เบคอน", price: 10 },
+    { name: "ชีส", price: 15 }
+  ];
+
+  const menuList = document.getElementById('menuList');
+  menuItems.forEach(item => {
+    const wrapper = document.createElement('div');
+    wrapper.classList.add('flex', 'items-center', 'space-x-2', 'bg-yellow-50', 'p-2', 'rounded-lg', 'shadow-sm');
+    wrapper.innerHTML = `
+      <input type="checkbox" class="menu" value="${item.price}" data-name="${item.name}" data-price="${item.price}">
+      <span class="text-red-700 font-medium">${item.name} (${item.price}฿)</span>
+    `;
+    menuList.appendChild(wrapper);
+  });
+
+  const sauceBoxes = document.querySelectorAll('.sauce');
+  const totalPriceEl = document.getElementById('totalPrice');
+
+  function updateTotal() {
+    const selected = Array.from(document.querySelectorAll('.menu:checked')).map(cb => ({
+      name: cb.dataset.name,
+      price: parseInt(cb.dataset.price),
+      checkbox: cb
+    }));
+
+    const underFive = selected.filter(i => i.price <= 5);
+    const freeItems = underFive.slice(0, 2);
+    const paidUnderFive = underFive.slice(2);
+
+    const overFive = selected.filter(i => i.price > 5);
+    const paidItems = overFive.concat(paidUnderFive);
+
+    const extra = paidItems.reduce((acc, i) => acc + i.price, 0);
+    totalPriceEl.textContent = basePrice + extra;
+  }
+
+  menuList.addEventListener('change', updateTotal);
+  sauceBoxes.forEach(cb => cb.addEventListener('change', () => {}));
+
+  document.getElementById('submitOrder').addEventListener('click', () => {
+    const selected = Array.from(document.querySelectorAll('.menu:checked')).map(cb => cb.dataset.name);
+    const sauces = Array.from(document.querySelectorAll('.sauce:checked')).map(cb => cb.dataset.name);
+    const total = totalPriceEl.textContent;
+
+    alert(`สั่งซื้อสำเร็จ!\n\nหน้า: ${selected.join(', ')}\nซอส: ${sauces.join(', ') || 'ไม่มี'}\nรวม: ${total} บาท`);
+    sendToGoogleSheet(selected, sauces, total);
+    document.getElementById('menuForm').reset();
+    updateTotal();
+  });
+
+  function sendToGoogleSheet(menu, sauces, total) {
+    const scriptURL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID_HERE/exec';
+    const formData = new FormData();
+    formData.append('เมนู', menu.join(', '));
+    formData.append('ซอส', sauces.join(', '));
+    formData.append('รวม', total);
+
+    fetch(scriptURL, { method: 'POST', body: formData })
+      .then(response => console.log('บันทึกแล้ว'))
+      .catch(error => console.error('เกิดข้อผิดพลาด', error));
+  }
+
+  updateTotal();
+</script>
+</body>
+</html>
